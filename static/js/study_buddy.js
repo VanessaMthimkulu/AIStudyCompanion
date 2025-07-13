@@ -98,6 +98,10 @@ class StudyBuddy {
                 console.log('Sending transcribed message:', transcription.text);
                 // First add the transcribed text to the chat as user message
                 this.addMessageToChat(transcription.text, 'user', 'voice');
+                
+                // Reset processing state before sending to AI
+                this.isProcessing = false;
+                
                 // Then send to AI
                 await this.sendMessage(transcription.text, 'voice', transcription.duration || 0);
             } else {
@@ -148,6 +152,7 @@ class StudyBuddy {
             const typingId = this.showTypingIndicator();
             
             // Send to API
+            console.log('Sending to API:', { message, inputMethod, sessionId: this.sessionId });
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
@@ -162,6 +167,7 @@ class StudyBuddy {
             });
 
             const result = await response.json();
+            console.log('API response:', result);
             
             // Remove typing indicator
             this.removeTypingIndicator(typingId);
