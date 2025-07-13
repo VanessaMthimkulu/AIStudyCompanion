@@ -3,9 +3,9 @@ import logging
 from typing import List, Dict, Any, Optional
 import numpy as np
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import CohereEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.document_loaders import TextLoader
+from langchain_community.embeddings import CohereEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader
 from langchain.schema import Document
 from app import db
 from models import KnowledgeBase
@@ -20,46 +20,54 @@ class RAGService:
         
         if self.cohere_api_key:
             try:
-                self.embeddings = CohereEmbeddings(cohere_api_key=self.cohere_api_key)
+                self.embeddings = CohereEmbeddings(
+                    cohere_api_key=self.cohere_api_key,
+                    user_agent="ai-study-buddy/1.0"
+                )
                 self.initialize_vector_store()
             except Exception as e:
                 logger.error(f"Error initializing embeddings: {e}")
+                self.embeddings = None
         else:
             logger.warning("Cohere API key not found for RAG service")
     
     def initialize_vector_store(self):
         """Initialize or load the vector store with existing knowledge base"""
         try:
-            # Load existing knowledge base from database
-            knowledge_items = KnowledgeBase.query.all()
-            
-            if knowledge_items:
-                documents = []
-                for item in knowledge_items:
-                    doc = Document(
-                        page_content=item.content,
-                        metadata={
-                            "title": item.title,
-                            "category": item.category,
-                            "source_url": item.source_url,
-                            "id": item.id
-                        }
-                    )
-                    documents.append(doc)
+            from app import app
+            with app.app_context():
+                # Load existing knowledge base from database
+                knowledge_items = KnowledgeBase.query.all()
                 
-                # Create vector store from documents
-                if documents and self.embeddings:
-                    self.vector_store = FAISS.from_documents(documents, self.embeddings)
-                    logger.info(f"Initialized vector store with {len(documents)} documents")
-            else:
-                # Initialize with default educational content
-                self.add_default_knowledge()
+                if knowledge_items:
+                    documents = []
+                    for item in knowledge_items:
+                        doc = Document(
+                            page_content=item.content,
+                            metadata={
+                                "title": item.title,
+                                "category": item.category,
+                                "source_url": item.source_url,
+                                "id": item.id
+                            }
+                        )
+                        documents.append(doc)
+                    
+                    # Create vector store from documents
+                    if documents and self.embeddings:
+                        self.vector_store = FAISS.from_documents(documents, self.embeddings)
+                        logger.info(f"Initialized vector store with {len(documents)} documents")
+                else:
+                    # Initialize with default educational content
+                    self.add_default_knowledge()
                 
         except Exception as e:
             logger.error(f"Error initializing vector store: {e}")
     
     def add_default_knowledge(self):
         """Add some default educational content to the knowledge base"""
+        from app import app
+        
         default_content = [
             {
                 "title": "Study Techniques: Spaced Repetition",
@@ -84,26 +92,28 @@ class RAGService:
         ]
         
         try:
-            for content in default_content:
-                # Check if content already exists
-                existing = KnowledgeBase.query.filter_by(title=content["title"]).first()
-                if not existing:
-                    knowledge_item = KnowledgeBase(
-                        title=content["title"],
-                        content=content["content"],
-                        category=content["category"]
-                    )
-                    db.session.add(knowledge_item)
-            
-            db.session.commit()
-            logger.info("Added default knowledge base content")
-            
-            # Reinitialize vector store with new content
-            self.initialize_vector_store()
+            with app.app_context():
+                for content in default_content:
+                    # Check if content already exists
+                    existing = KnowledgeBase.query.filter_by(title=content["title"]).first()
+                    if not existing:
+                        knowledge_item = KnowledgeBase(
+                            title=content["title"],
+                            content=content["content"],
+                            category=content["category"]
+                        )
+                        db.session.add(knowledge_item)
+                
+                db.session.commit()
+                logger.info("Added default knowledge base content")
+                
+                # Reinitialize vector store with new content
+                self.initialize_vector_store()
             
         except Exception as e:
             logger.error(f"Error adding default knowledge: {e}")
-            db.session.rollback()
+            with app.app_context():
+                db.session.rollback()
     
     def add_knowledge(self, title: str, content: str, category: str, source_url: str = None) -> bool:
         """Add new knowledge to the database and update vector store"""

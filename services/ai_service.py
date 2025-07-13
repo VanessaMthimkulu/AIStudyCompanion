@@ -34,21 +34,19 @@ class AIService:
             return None
             
         try:
-            response = self.cohere_client.generate(
-                model='command-xlarge-nightly',
-                prompt=prompt,
+            response = self.cohere_client.chat(
+                message=prompt,
                 max_tokens=max_tokens,
                 temperature=0.7,
                 k=0,
-                stop_sequences=["--"],
-                return_likelihoods='NONE'
+                stop_sequences=["--"]
             )
-            return response.generations[0].text.strip()
+            return response.text.strip()
         except Exception as e:
             logger.error(f"Cohere API error: {e}")
             return None
     
-    def generate_response_together(self, messages: list, model: str = "meta-llama/Llama-2-7b-chat-hf") -> Optional[str]:
+    def generate_response_together(self, messages: list, model: str = "meta-llama/Llama-3-8b-chat-hf") -> Optional[str]:
         """Generate text response using Together AI API"""
         if not self.together_client:
             return None
@@ -60,8 +58,6 @@ class AIService:
                 max_tokens=500,
                 temperature=0.7,
                 top_p=0.9,
-                top_k=50,
-                repetition_penalty=1.1,
                 stop=["<|eot_id|>", "<|end_of_text|>"],
                 stream=False
             )

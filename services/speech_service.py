@@ -20,11 +20,15 @@ class SpeechService:
         
         # Initialize Google TTS
         self.google_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        try:
-            self.tts_client = texttospeech.TextToSpeechClient()
-        except Exception as e:
-            logger.warning(f"Google TTS client initialization failed: {e}")
-            self.tts_client = None
+        self.tts_client = None
+        if self.google_credentials:
+            try:
+                self.tts_client = texttospeech.TextToSpeechClient()
+            except Exception as e:
+                logger.warning(f"Google TTS client initialization failed: {e}")
+                self.tts_client = None
+        else:
+            logger.info("Google TTS credentials not provided, using fallback TTS")
     
     def transcribe_audio(self, audio_data: bytes) -> Dict[str, Any]:
         """Transcribe audio using AssemblyAI"""
