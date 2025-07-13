@@ -87,12 +87,18 @@ class StudyBuddy {
             const audioBlob = await stopRecording();
             this.isRecording = false;
 
+            // Show transcription indicator
+            this.updateVoiceButton(false, true);
+            
             // Transcribe audio
             const transcription = await transcribeAudio(audioBlob);
             console.log('Transcription result:', transcription);
 
             if (transcription.success && transcription.text && transcription.text.trim()) {
-                // Send transcribed text as message
+                console.log('Sending transcribed message:', transcription.text);
+                // First add the transcribed text to the chat as user message
+                this.addMessageToChat(transcription.text, 'user', 'voice');
+                // Then send to AI
                 await this.sendMessage(transcription.text, 'voice', transcription.duration || 0);
             } else {
                 const errorMsg = transcription.error || 'Could not understand the audio. Please try again.';
@@ -133,8 +139,10 @@ class StudyBuddy {
         try {
             this.isProcessing = true;
             
-            // Add user message to chat
-            this.addMessageToChat(message, 'user', inputMethod);
+            // Add user message to chat (only if not voice, as voice already added)
+            if (inputMethod !== 'voice') {
+                this.addMessageToChat(message, 'user', inputMethod);
+            }
             
             // Show typing indicator
             const typingId = this.showTypingIndicator();
