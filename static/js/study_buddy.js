@@ -89,12 +89,15 @@ class StudyBuddy {
 
             // Transcribe audio
             const transcription = await transcribeAudio(audioBlob);
+            console.log('Transcription result:', transcription);
 
-            if (transcription.success && transcription.text.trim()) {
+            if (transcription.success && transcription.text && transcription.text.trim()) {
                 // Send transcribed text as message
-                await this.sendMessage(transcription.text, 'voice', transcription.duration);
+                await this.sendMessage(transcription.text, 'voice', transcription.duration || 0);
             } else {
-                this.showError('Could not understand the audio. Please try again.');
+                const errorMsg = transcription.error || 'Could not understand the audio. Please try again.';
+                console.error('Transcription failed:', errorMsg);
+                this.showError(errorMsg);
             }
         } catch (error) {
             console.error('Voice input error:', error);
@@ -306,20 +309,51 @@ class StudyBuddy {
      * Speak text using TTS
      */
     async speakText(text) {
+        if (!text || !text.trim()) return;
+        
         try {
             // Try API-based TTS first
             const result = await synthesizeSpeech(text);
             
-            if (result.success) {
+            if (result && result.success && result.audio_data) {
                 playAudioFromBase64(result.audio_data, result.format);
             } else {
                 // Fallback to Web Speech API
-                fallbackToWebSpeech(text);
+                this.fallbackToWebSpeech(text);
             }
         } catch (error) {
             console.error('TTS error:', error);
             // Fallback to Web Speech API
-            fallbackToWebSpeech(text);
+            this.fallbackToWebSpeech(text);
+        }
+    }
+
+    /**
+     * Fallback to Web Speech API for TTS
+     */
+    fallbackToWebSpeech(text) {
+        try {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                // Get available voices and use a good one if available
+                const voices = speechSynthesis.getVoices();
+                const englishVoice = voices.find(voice => 
+                    voice.lang.startsWith('en') && voice.localService
+                );
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+                
+                speechSynthesis.speak(utterance);
+            } else {
+                console.warn('Speech synthesis not supported');
+            }
+        } catch (error) {
+            console.error('Web Speech fallback error:', error);
         }
     }
 
