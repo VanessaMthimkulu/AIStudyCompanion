@@ -8,6 +8,15 @@ AI Study Buddy is a Flask-based web application that provides an interactive AI-
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### July 13, 2025 - Voice Recording Issues Fixed
+- Fixed voice input processing state management preventing AI responses
+- Improved JavaScript error handling for TTS synthesis
+- Created missing preferences.html template with voice settings
+- Enhanced text escaping for JavaScript to prevent syntax errors
+- Voice recording now fully functional with transcription and AI responses
+
 ## System Architecture
 
 The application follows a traditional web architecture pattern with clear separation of concerns:

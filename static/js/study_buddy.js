@@ -459,7 +459,15 @@ class StudyBuddy {
      * Escape text for JavaScript string
      */
     escapeForJs(text) {
-        return text.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+        return text
+            .replace(/\\/g, '\\\\')  // Escape backslashes first
+            .replace(/'/g, "\\'")     // Escape single quotes
+            .replace(/"/g, '\\"')     // Escape double quotes
+            .replace(/\n/g, '\\n')    // Escape newlines
+            .replace(/\r/g, '\\r')    // Escape carriage returns
+            .replace(/\t/g, '\\t')    // Escape tabs
+            .replace(/\u2028/g, '\\u2028')  // Escape line separator
+            .replace(/\u2029/g, '\\u2029'); // Escape paragraph separator
     }
 }
 
